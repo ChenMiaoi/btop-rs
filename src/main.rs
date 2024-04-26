@@ -9,6 +9,7 @@ use std::{
 
 use config::config::Config;
 use libc::{SIGCONT, SIGINT, SIGTSTP, SIGWINCH};
+use log::{info, warn};
 use shared::global::*;
 use util::*;
 
@@ -92,6 +93,8 @@ extern "C" fn signal_handler(signal: c_int) {
 }
 
 fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace")).init();
+
     let g_instance: Arc<Mutex<Global>> = Global::get_instance();
     let c_instance: Arc<Mutex<Config>> = Config::get_instance();
     let t_instance: Arc<Mutex<Theme>> = Theme::get_instance();
@@ -136,7 +139,7 @@ fn main() {
                     {
                         let mut config = c_instance.lock().unwrap();
                         config.set_dir(dir);
-                        println!("set config file dir path: {:?}", config.get_dir());
+                        info!("set config file dir path: {:?}", config.get_dir());
                     }
                     break;
                 }
@@ -149,12 +152,12 @@ fn main() {
         let mut logger = l_instance.lock().unwrap();
         let mut theme = t_instance.lock().unwrap();
         if config.get_dir().as_os_str().is_empty() {
-            println!("WARNING: Could not get path user HOME folder.");
-            println!("Make sure $XDG_CONFIG_HOME or $HOME environment variables is correctly set to fix this.");
+            warn!("WARNING: Could not get path user HOME folder.");
+            warn!("Make sure $XDG_CONFIG_HOME or $HOME environment variables is correctly set to fix this.");
         } else {
             if !config.get_dir().is_dir() && !fs::create_dir(config.get_dir()).is_ok() {
-                println!("WARNING: Could not create or access btop config directory. Logging and config saving disabled.");
-                println!("Make sure $XDG_CONFIG_HOME or $HOME environment variables is correctly set to fix this.");
+                warn!("WARNING: Could not create or access btop config directory. Logging and config saving disabled.");
+                warn!("Make sure $XDG_CONFIG_HOME or $HOME environment variables is correctly set to fix this.");
             } else {
                 let config_dir = config.get_dir().clone();
                 config.set_file("btop-rs.conf");
@@ -165,7 +168,7 @@ fn main() {
                     theme.clear_user_dir();
                 }
 
-                println!("set config path: {:?}", config.get_file());
+                info!("set config path: {:?}", config.get_file());
             }
         }
     }
@@ -175,7 +178,7 @@ fn main() {
     {
         let mut global = g_instance.lock().unwrap();
         global.set_self(self_path);
-        println!("get the execute path: {:?}", global.get_self());
+        info!("get the execute path: {:?}", global.get_self());
     }
 
     {
@@ -185,11 +188,11 @@ fn main() {
         if !global.get_self().as_os_str().is_empty() {
             match fs::canonicalize(global.get_self().join("../share/btop-rs/themes")) {
                 Ok(canon_path) => {
-                    println!("canno: {:?}", canon_path);
+                    info!("canno: {:?}", canon_path);
                     theme.set_theme_dir(canon_path);
                 }
                 Err(err) => {
-                    println!("Failed to get canonical path: {}", err);
+                    warn!("Failed to get canonical path: {}", err);
                 }
             };
             if let Ok(perms) = fs::metadata(theme.get_theme_dir()) {
@@ -217,16 +220,28 @@ fn main() {
             }
         }
 
-        println!("user theme dir: {:?}", theme.get_user_dir());
-        println!("theme dir: {:?}", theme.get_theme_dir());
+        info!("user theme dir: {:?}", theme.get_user_dir());
+        info!("theme dir: {:?}", theme.get_theme_dir());
     }
 
     let mut load_warnings: Vec<String> = Vec::new();
     {
         let mut config = c_instance.lock().unwrap();
         match config.load(&mut load_warnings) {
-            Ok(_) => {}
-            Err(_) => {}
+            Ok(_) => info!("config load done!"),
+            Err(_) => warn!("config load failed"),
+        }
+
+        if config.get_current_boxes().is_empty() {
+            let default_v = config.get_boxes("shown_boxes");
+            config.check_boxes(&default_v);
+            warn!("set new current_box: {:?}", config.get_current_boxes());
+        }
+
+        {
+            let v = config.get_bool("truecolor");
+            let global = g_instance.lock().unwrap();
+            config.set_bool("lowcolor", if global.get_arg_lc() { true } else { v });
         }
     }
     // while true {}

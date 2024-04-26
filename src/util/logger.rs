@@ -5,12 +5,20 @@ use std::{
 
 pub struct Logger {
     pub log_file: PathBuf,
+    pub log_levels: Vec<String>,
 }
 
 impl Logger {
     fn new() -> Self {
         Logger {
             log_file: PathBuf::new(),
+            log_levels: vec![
+                "DISABLED".to_owned(),
+                "ERROR".to_owned(),
+                "WARNING".to_owned(),
+                "INFO".to_owned(),
+                "DEBUG".to_owned(),
+            ],
         }
     }
 
@@ -29,5 +37,9 @@ impl Logger {
 
     pub fn get_file(&self) -> &PathBuf {
         &self.log_file
+    }
+
+    pub fn get_levels(&self) -> &Vec<String> {
+        &self.log_levels
     }
 }

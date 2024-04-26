@@ -88,4 +88,8 @@ impl Global {
     pub fn get_self(&self) -> &PathBuf {
         &self.self_path
     }
+
+    pub fn get_arg_lc(&self) -> bool {
+        self.arg_low_color
+    }
 }

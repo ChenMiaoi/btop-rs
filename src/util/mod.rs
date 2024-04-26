@@ -1,12 +1,8 @@
+use core::str;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub mod logger;
-
-pub enum InvalidIntReason {
-    ValueTooHigh,
-    ValueTooLow,
-    ParseError,
-}
+pub mod macro_def;
 
 pub fn time_s() -> u64 {
     SystemTime::now()
@@ -38,23 +34,9 @@ pub fn is_int(value: &str) -> bool {
     }
 }
 
-pub fn is_valid_int(key: &str, value: &str) -> Result<i32, InvalidIntReason> {
-    let parsed_value = match key {
-        "update_ms" => match value.parse::<i32>() {
-            Ok(parsed) if parsed < 100 => Err(InvalidIntReason::ValueTooLow),
-            Ok(parsed) if parsed > 86400000 => Err(InvalidIntReason::ValueTooHigh),
-            Ok(parsed) => Ok(parsed),
-            _ => Err(InvalidIntReason::ParseError),
-        },
-        _ => match value.parse::<i32>() {
-            Ok(parsed) => Ok(parsed),
-            _ => Err(InvalidIntReason::ParseError),
-        },
-    };
-
-    // match parsed_value {
-    //     Ok(parsed) => Ok(parsed),
-    //     Err(err) => Err(err),
-    // }
-    parsed_value
+pub fn ssplit<'a>(s: &'a str, delim: char) -> Vec<&'a str> {
+    s.split(delim)
+        .map(|substring| substring.trim())
+        .filter(|substring| !substring.is_empty())
+        .collect()
 }
